@@ -1,0 +1,11 @@
+*.bat text eol=crlf
+*.BAT text eol=crlf
+*.cmd text eol=crlf
+*.CMD text eol=crlf
+*.sh text eol=lf
+*.SH text eol=lf
+*.command text eol=lf
+*.COMMAND text eol=lf
+code/backend/migrations/** -text
+code/backend/content/packages/pkg_gameplay_v2/** -text
+code/backend/content/packages/pkg_gameplay_v3/** -text whitespace=cr-at-eol

@@ -1,0 +1,5 @@
+fastapi==0.131.0
+pydantic==2.12.5
+uvicorn==0.41.0
+pymysql==1.2.0
+cryptography==45.0.7
