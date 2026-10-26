@@ -16,6 +16,14 @@
   width: 0;
   height: 0;
 }
+.gal-dialogue > .paged-reading.dialogue-reading .reading-viewport {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.gal-dialogue > .paged-reading.dialogue-reading .reading-viewport::-webkit-scrollbar {
+  width: 4px;
+}
 .ending-reading .reading-viewport { height:0; }
 .history-drawer .paged-reading { margin-top:8px; }
 .ending-review-text { white-space:pre-wrap; }

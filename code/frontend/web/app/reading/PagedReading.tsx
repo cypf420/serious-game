@@ -27,9 +27,13 @@ export function PagedReading({ text, storageKey, readingKey, streaming, initialO
     const update = () => {
       if (!viewport.current || !measure.current) return;
       const element = measure.current;
-      element.style.width = `${viewport.current.clientWidth}px`;
-      const height = Math.max(1, viewport.current.clientHeight);
-      const next = paginateText(text, candidate => { element.textContent = candidate; return element.scrollHeight <= height; });
+      const visibleText = viewport.current.firstElementChild;
+      if (!visibleText) return;
+      // clientWidth/scrollHeight round fractional CSS pixels. Near a line
+      // boundary that can fit one more line than the visible box can show.
+      element.style.width = `${visibleText.getBoundingClientRect().width}px`;
+      const height = Math.max(1, viewport.current.getBoundingClientRect().height - 1);
+      const next = paginateText(text, candidate => { element.textContent = candidate; return element.getBoundingClientRect().height <= height; });
       element.textContent = "";
       setPages(next);
       setIndex(pageForOffset(next, offset.current));
