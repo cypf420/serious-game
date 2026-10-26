@@ -12,7 +12,7 @@ import socket
 import ssl
 from threading import RLock
 from typing import Callable, Iterator
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 
 from serious_game_backend.application.ports import LLMCallAuditRepository, RoleLLMGateway
 from serious_game_backend.config import Settings
@@ -153,6 +153,39 @@ def _pinned_https_json_transport(
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _resolve_fake_ip_hostname(hostname: str) -> set:
+    """Recover public DNS behind TUN Fake-IP without trusting reserved peers."""
+    connection = _PinnedHTTPSConnection(
+        "cloudflare-dns.com", 443,
+        validated_addresses=("1.1.1.1", "1.0.0.1"), timeout=5,
+    )
+    try:
+        query = urlencode({"name": hostname, "type": "A"})
+        connection.request("GET", f"/dns-query?{query}",
+                           headers={"Accept": "application/dns-json"})
+        response = connection.getresponse()
+        if response.status != 200:
+            raise ValueError("DNS service rejected the query")
+        payload = response.read(65537)
+        if len(payload) > 65536:
+            raise ValueError("DNS response too large")
+        result = json.loads(payload)
+        if result.get("Status") != 0:
+            raise ValueError("DNS lookup failed")
+        return {
+            ipaddress.ip_address(answer["data"])
+            for answer in result.get("Answer", [])
+            if answer.get("type") == 1
+        }
+    except (OSError, ValueError, KeyError, TypeError, AttributeError,
+            http.client.HTTPException) as exc:
+        raise PlayerLLMConfigurationInvalidError(
+            "检测到代理 Fake-IP，但无法查询真实公网地址，请检查网络后重试"
+        ) from exc
+    finally:
+        connection.close()
 
 
 @dataclass(frozen=True, slots=True)
@@ -562,6 +595,18 @@ class PlayerLLMConfigurationRegistry:
             }
         except (OSError, ValueError) as exc:
             raise PlayerLLMConfigurationInvalidError("Base URL 域名无法安全解析") from exc
+        # Clash TUN can synthesize both IPv4 and IPv6 benchmarking addresses.
+        # Never connect to these addresses or exempt them from the public-IP
+        # check: recover real DNS via a fixed, TLS-verified resolver instead.
+        fake_ip_networks = (
+            ipaddress.ip_network("198.18.0.0/15"),
+            ipaddress.ip_network("2001:2::/48"),
+        )
+        if literal_address is None and resolved and all(
+            any(address in network for network in fake_ip_networks)
+            for address in resolved
+        ):
+            resolved = _resolve_fake_ip_hostname(parsed.hostname)
         if not resolved or any(not address.is_global for address in resolved):
             raise PlayerLLMConfigurationInvalidError(
                 "Base URL 不能指向内网、回环、链路本地或保留地址"

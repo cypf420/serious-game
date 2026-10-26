@@ -54,6 +54,8 @@ chmod +x BEGIN.sh
 
 NPC 对话、审阅和文书生成需要有效的 OpenAI 兼容接口、模型名和 API Key。密钥只保存在当前后端进程内，不写入项目源码；后端重启后，按游戏提示重新配置一次。
 
+API 地址需包含服务商要求的路径，例如 `https://api.qianzhang-ai.cn/v1`。使用 Clash TUN 的 Fake-IP DNS 时，后端会通过 Cloudflare HTTPS DNS 查询该域名的真实公网 IPv4 地址，仍会拒绝内网和保留地址；此兼容模式需要能访问 `cloudflare-dns.com`（连接固定到 `1.1.1.1` 或 `1.0.0.1`）。
+
 ## 本地存档
 
 默认 SQLite 存档位置：
